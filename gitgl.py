@@ -46,7 +46,7 @@ repohead = commit
 random.seed(repohead.hex)
 
 class viscommit:
-	def __init__(self, commitobj, x, y, z, px, py, pz):
+	def __init__(self, commitobj, x, y, z, px, py, pz, mergecolor):
 		self.commitobj = commitobj
 		self.parentx = px
 		self.parenty = py
@@ -54,6 +54,7 @@ class viscommit:
 		self.x = x
 		self.y = y
 		self.z = z
+		self.mergecolor = mergecolor
 
 def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 	colors.extend(color_mergelines)
@@ -93,7 +94,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 		drawText(font, commit.parents[0].hex[0:7], x + 0.02, y - clen - nextlen - randy, z)
 	return colors, vertices, randy
 
-v = viscommit(commit, x, y, z, x, y, z)
+v = viscommit(commit, x, y, z, x, y, z, color_commitlines)
 orighead = copy.copy(v)
 mergestack = [v]
 pxs = x
@@ -118,9 +119,13 @@ while len(mergestack) > 0:
 	y = float(vc.y)
 	z = float(vc.z)
 	
-	colors.extend(color_mergelines)
-	colors.extend(color_mergelines)
+	colors.extend(vc.mergecolor)
+	colors.extend(vc.mergecolor)
+	colors.extend(vc.mergecolor)
+	colors.extend(vc.mergecolor)
 	vertices.extend([x - clen/2, y - clen/2, z])
+	vertices.extend([x - clen/2, vc.parenty - clen/2, vc.parentz])
+	vertices.extend([x - clen/2, vc.parenty - clen/2, vc.parentz])
 	vertices.extend([vc.parentx - clen/2, vc.parenty - clen/2, vc.parentz])
 	color_commitlines[2] = (float(40) + random.uniform(41, 255)) / 255
 	colors, vertices, randy = add_commit(colors, vertices, x, y, z, commit, clen, True)
@@ -134,16 +139,19 @@ while len(mergestack) > 0:
 		else:
 			pxs = x - (xlim * r)
 		if len(commit.parents) > 1:
+			vcmergecolor = copy.copy(color_mergelines)
+			vcmergecolor[2] = (float(40) + random.uniform(41, 255)) / 255
 			for i, parent in enumerate(commit.parents):
 				r = random.uniform(5, 10)
+				q = random.uniform(25, 50)
 				if i == 0:
 					continue
 				if switch == 1:
 					pxs = pxs + xlimextend * r
 				else:
 					pxs = pxs - (xlimextend * r)
-				pxy = y - r
-				vc = viscommit(parent, pxs, y, z, x, y, z)
+				pxy = y - q
+				vc = viscommit(parent, pxs, pxy, z, x, y, z, vcmergecolor)
 				mergestack.append(vc)
 			switch = 1 - switch
 			xlim = xlim + xlimextend
