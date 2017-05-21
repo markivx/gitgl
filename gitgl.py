@@ -25,8 +25,11 @@ clen = 0.90
 nextlen = 5.00
 visitedcommits = {'XXXX': 0}
 
-def drawText(font, mystr, x, y, z):
-	tsf = font.render(mystr, True, (255, 255, 255, 0), (0, 0, 0, 255))
+textcolor = (100, 100, 100, 0)
+imptextcolor = (255, 255, 255, 0)
+
+def drawText(font, mystr, x, y, z, forecolor):
+	tsf = font.render(mystr, True, forecolor, (0, 0, 0, 255))
 	fts = pygame.image.tostring(tsf, "RGBA", True)
 	glRasterPos3d(*(x, y, z))
 	glDrawPixels(tsf.get_width(), tsf.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, fts)
@@ -37,11 +40,13 @@ pygame.display.set_mode (display, pygame.OPENGL|pygame.DOUBLEBUF)
 glClearColor (0.0, 0.0, 0.0, 1.0)
 glEnableClientState (GL_VERTEX_ARRAY)
 glEnableClientState (GL_COLOR_ARRAY)	
-gluPerspective(45, (display[0]/display[1]), 0.1, 6250.0)
-glTranslatef(0.0, 0.0, -5)
+gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
+glTranslatef(0.0, 0.0, -50)
 selfont = pygame.font.match_font('ubuntucondensed')
 font = pygame.font.Font(selfont, 16)
 commit = repo.revparse_single(sys.argv[2])
+impcommithash = sys.argv[3]
+impcommit = repo.revparse_single(impcommithash)
 repohead = commit
 random.seed(repohead.hex)
 
@@ -76,11 +81,11 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinesc
 	vertices.extend([x + clen/2, y, z])
 	vertices.extend([x + clen/2, y - clen, z])
 
-	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:20]
+	text = commit.hex[0:8] + " "  +  commit.message.split("\n")[0][0:80]
 	if commit.hex in repohead.hex:
 		text = text + "[HEAD] "
-	if rendertext == True:
-		drawText(font, text, x + 0.02, y + 0.03, z)
+	elif rendertext == True:
+		drawText(font, text, x + 0.02, y + 0.03, z, textcolor)
 
 	if len(commit.parents) == 0:
 		return colors, vertices, 0
@@ -91,7 +96,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinesc
 	vertices.extend([x, y - clen, z])
 	vertices.extend([x, y - nextlen - randy, z])
 	if commit.parents[0].hex in visitedcommits:
-		drawText(font, commit.parents[0].hex[0:7], x + 0.02, y - clen - nextlen - randy, z)
+		drawText(font, commit.parents[0].hex[0:8], x + 0.02, y - clen - nextlen - randy, z, textcolor)
 	return colors, vertices, randy
 
 v = viscommit(commit, x, y, z, x, y, z, color_commitlines)
@@ -136,7 +141,10 @@ while len(mergestack) > 0:
 	else:
 		commitlinescolor = color_commitlines
 	colors, vertices, randy = add_commit(colors, vertices, x, y, z, commit, clen, True, commitlinescolor)
-	visitedcommits[commit.hex] = 1
+	if impcommit.hex in commit.hex:
+			visitedcommits[commit.hex] = (x, y, z, commit)
+	else:
+			visitedcommits[commit.hex] = 1
 	printprogress(commitscount)
 	commitscount = commitscount + 1
 	while len(commit.parents) > 0:
@@ -173,7 +181,10 @@ while len(mergestack) > 0:
 			break
 		#print commit.hex,commit.message.split("\n")[0]
 		(colors, vertices, randy) = add_commit(colors, vertices, x, y, z, commit, clen, ismerge or (len(commit.parents) > 1), commitlinescolor)
-		visitedcommits[commit.hex] = 1
+		if impcommit.hex in commit.hex:
+			visitedcommits[commit.hex] = (x, y, z, commit)
+		else:
+			visitedcommits[commit.hex] = 1
 		printprogress(commitscount)
 		commitscount = commitscount + 1
 	firstline = False
@@ -203,6 +214,11 @@ pygame.key.set_repeat(2,10)
 
 startScale = 0.02
 
+impx = visitedcommits[impcommit.hex][0]
+impy = visitedcommits[impcommit.hex][1]
+impz = visitedcommits[impcommit.hex][2]
+importantcommit = visitedcommits[impcommit.hex][3]
+
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -228,6 +244,8 @@ while running:
 				speed = 100			
 			elif event.key == pygame.K_7:
 				speed = 300
+			elif event.key == pygame.K_8:
+				speed = 700
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT] or kp[K_d]:
  			glTranslatef(-1 * speed, 0, 0)
@@ -241,20 +259,6 @@ while running:
 			glTranslatef(0, speed,  0)
 		elif kp[K_UP]:
 			glTranslatef(0, -1 * speed, 0)
-		elif kp[K_q]:
-			glScalef(1/startScale, 1.0,  1.0)
-			startScale -= 0.02
-			if startScale <= 0.02:
-				startScale = 0.02
-			glScalef(startScale, 1.0,  1.0)
-			scaled=True
-		elif kp[K_e]:
-			glScalef(1/startScale, 1.0,  1.0)
-			startScale += 0.02
-			if startScale >= 10.0:
-				startScale = 10.0
-			glScalef(startScale, 1.0, 1.0)
-			scaled=True
 		elif kp[K_PAGEDOWN]:
 			glTranslatef(0, speed,  0)
 		elif kp[K_PAGEUP]:
@@ -268,6 +272,7 @@ while running:
 		glClear (GL_COLOR_BUFFER_BIT)
 		if textrendering == True:
 			glCallList (textlist)
+		drawText(font, importantcommit.message.split("\n")[0], impx + 0.02, impy + 0.03, impz, imptextcolor)
 		# create vertex buffer object
 		glDrawArrays (GL_LINES, 0, len(vertices)/3)
 		pygame.display.flip ()
