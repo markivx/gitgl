@@ -14,9 +14,9 @@ repostr = sys.argv[1] + "/.git"
 repo = Repository(repostr)
 vertices = []
 colors = []
-color_mergelines =  [0.25, 0.25, 0.75]
+color_mergelines =  [0.05, 0.05, 0.55]
 color_commitlines = [0.30, 0.30, 0.60]
-color_commitbox = [0.60, 0.60, 0.60]
+color_commitbox = [0.90, 0.90, 0.90]
 count = 0
 x = 0
 y = 2
@@ -37,15 +37,13 @@ pygame.display.set_mode (display, pygame.OPENGL|pygame.DOUBLEBUF)
 glClearColor (0.0, 0.0, 0.0, 1.0)
 glEnableClientState (GL_VERTEX_ARRAY)
 glEnableClientState (GL_COLOR_ARRAY)	
-gluPerspective(45, (display[0]/display[1]), 0.1, 550.0)
+gluPerspective(45, (display[0]/display[1]), 0.1, 6250.0)
 glTranslatef(0.0, 0.0, -5)
 selfont = pygame.font.match_font('ubuntucondensed')
-font = pygame.font.Font(selfont, 18)
-
+font = pygame.font.Font(selfont, 16)
 commit = repo.revparse_single(sys.argv[2])
 repohead = commit
 random.seed(repohead.hex)
-
 
 class viscommit:
 	def __init__(self, commitobj, x, y, z, px, py, pz):
@@ -77,7 +75,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 	vertices.extend([x + clen/2, y, z])
 	vertices.extend([x + clen/2, y - clen, z])
 
-	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:10]
+	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:20]
 	if commit.hex in repohead.hex:
 		text = text + "[HEAD] "
 	if rendertext == True:
@@ -86,7 +84,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 	if len(commit.parents) == 0:
 		return colors, vertices, 0
 
-	randy = random.uniform(5, 15)
+	randy = random.uniform(25, 50)
 	colors.extend(color_commitlines)
 	colors.extend(color_commitlines)
 	vertices.extend([x, y - clen, z])
@@ -98,15 +96,11 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 v = viscommit(commit, x, y, z, x, y, z)
 orighead = copy.copy(v)
 mergestack = [v]
-
 pxs = x
 switch = 0
-xlim = 6.5
-xlimextend = 6.5
-
-
+xlim = 20
+xlimextend = 20
 commitscount = 1
-
 starttime = int(round(time.time())) - 1
 
 def printprogress(commitscount):
@@ -127,28 +121,28 @@ while len(mergestack) > 0:
 	colors.extend(color_mergelines)
 	colors.extend(color_mergelines)
 	vertices.extend([x - clen/2, y - clen/2, z])
-	vertices.extend([vc.parentx + clen/2, vc.parenty - clen/2, vc.parentz])
+	vertices.extend([vc.parentx - clen/2, vc.parenty - clen/2, vc.parentz])
+	color_commitlines[2] = (float(40) + random.uniform(41, 255)) / 255
 	colors, vertices, randy = add_commit(colors, vertices, x, y, z, commit, clen, True)
-	#if commit.hex in visitedcommits:
-	#	continue
 	visitedcommits[commit.hex] = 1
 	printprogress(commitscount)
 	commitscount = commitscount + 1
 	while len(commit.parents) > 0:
 		r = random.uniform(5, 10)
 		if switch == 1:
-			pxs = x + xlim + r
+			pxs = x + xlim * r
 		else:
-			pxs = x - (xlim + r)
+			pxs = x - (xlim * r)
 		if len(commit.parents) > 1:
 			for i, parent in enumerate(commit.parents):
 				r = random.uniform(5, 10)
 				if i == 0:
 					continue
 				if switch == 1:
-					pxs = pxs + xlimextend + r
+					pxs = pxs + xlimextend * r
 				else:
-					pxs = pxs - (xlimextend + r)
+					pxs = pxs - (xlimextend * r)
+				pxy = y - r
 				vc = viscommit(parent, pxs, y, z, x, y, z)
 				mergestack.append(vc)
 			switch = 1 - switch
@@ -188,6 +182,8 @@ textrendering = False
 glShadeModel (GL_FLAT)
 pygame.key.set_repeat(2,10)
 
+startScale = 0.02
+
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -199,6 +195,20 @@ while running:
 			drawall = True
 			if event.key == pygame.K_t:
 				textrendering = not textrendering
+			elif event.key == pygame.K_1:
+				speed = 0.50
+			elif event.key == pygame.K_2:
+				speed = 2
+			elif event.key == pygame.K_3:
+				speed = 5
+			elif event.key == pygame.K_4:
+				speed = 10
+			elif event.key == pygame.K_5:
+				speed = 40
+			elif event.key == pygame.K_6:
+				speed = 100			
+			elif event.key == pygame.K_7:
+				speed = 300
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT] or kp[K_d]:
  			glTranslatef(-1 * speed, 0, 0)
@@ -212,10 +222,24 @@ while running:
 			glTranslatef(0, speed,  0)
 		elif kp[K_UP]:
 			glTranslatef(0, -1 * speed, 0)
+		elif kp[K_q]:
+			glScalef(1/startScale, 1.0,  1.0)
+			startScale -= 0.02
+			if startScale <= 0.02:
+				startScale = 0.02
+			glScalef(startScale, 1.0,  1.0)
+			scaled=True
+		elif kp[K_e]:
+			glScalef(1/startScale, 1.0,  1.0)
+			startScale += 0.02
+			if startScale >= 10.0:
+				startScale = 10.0
+			glScalef(startScale, 1.0, 1.0)
+			scaled=True
 		elif kp[K_PAGEDOWN]:
-			glTranslatef(0, speed * 10,  0)
+			glTranslatef(0, speed,  0)
 		elif kp[K_PAGEUP]:
-			glTranslatef(0, -1 * (speed * 10), 0)
+			glTranslatef(0, -1 * speed, 0)
 		elif kp[K_z]:
 			running = False
 			break
