@@ -10,10 +10,13 @@ from OpenGL.GLU import *
 from pygit2 import Repository
 from pygit2 import GIT_SORT_NONE
 
-repostr = sys.argv[1]+"/.git"
+repostr = sys.argv[1] + "/.git"
 repo = Repository(repostr)
 vertices = []
 colors = []
+
+color_mergelines = [0.7, 0.7, 0.7]
+color_commitlines = [0.50, 0.50, 0.80]
 
 count = 0
 x = 0
@@ -32,7 +35,7 @@ pygame.display.set_mode (display, pygame.OPENGL|pygame.DOUBLEBUF)
 glClearColor (0.0, 0.0, 0.0, 1.0)
 glEnableClientState (GL_VERTEX_ARRAY)
 glEnableClientState (GL_COLOR_ARRAY)	
-gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
+gluPerspective(45, (display[0]/display[1]), 0.1, 550.0)
 glTranslatef(0.0, 0.0, -5)
 selfont = pygame.font.match_font('ubuntucondensed')
 font = pygame.font.Font(selfont, 18)
@@ -43,14 +46,13 @@ commit = repo.revparse_single('HEAD')
 repohead = commit
 random.seed(repohead.hex)
 
-clen=0.03
-coffset = 0.02
-nextlen = 0.88
+clen=0.07
+nextlen = 5.00
+visitedcommits = {'XXXX': 0}
 
 class viscommit:
-	def __init__(self, commitobj, mergebase, x, y, z, px, py, pz):
+	def __init__(self, commitobj, x, y, z, px, py, pz):
 		self.commitobj = commitobj
-		self.mergebase = mergebase
 		self.parentx = px
 		self.parenty = py
 		self.parentz = pz
@@ -58,15 +60,15 @@ class viscommit:
 		self.y = y
 		self.z = z
 
-def add_commit(colors, vertices, x, y, z, commit, clen, mb):
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
+def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
 
 	# Draw commit symbol
 	vertices.extend([x - clen/2, y, z])
@@ -81,33 +83,30 @@ def add_commit(colors, vertices, x, y, z, commit, clen, mb):
 	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:10]
 	if commit.hex in repohead.hex:
 		text = text + "[HEAD] "
-	if mb is not None and len(commit.parents) > 0 and mb.hex == commit.parents[0].hex:
-		text = text + "[mb: " + mb.hex[0:7] + "]"
-	#drawText(font, text, x + 0.02, y + 0.03, z)
-
-	if len(commit.parents) > 0:
-		if mb is not None and mb.hex == commit.parents[0].hex:
-			return colors, vertices
+	if rendertext == True:
+		drawText(font, text, x + 0.02, y + 0.03, z)
 
 	if len(commit.parents) == 0:
 		return colors, vertices
+
 
 	colors.extend([0.50, 0.50, 0.80])
 	colors.extend([0.50, 0.50, 0.80])
 	vertices.extend([x, y - clen, z])
 	vertices.extend([x, y - nextlen, z])
+	if commit.parents[0].hex in visitedcommits:
+		drawText(font, commit.parents[0].hex[0:7], x + 0.02, y - clen - nextlen, z)
 	return colors, vertices
 
-v = viscommit(commit, None, x, y, z, x, y, z)
+v = viscommit(commit, x, y, z, x, y, z)
 orighead = copy.copy(v)
 mergestack = [v]
 
 pxs = x
 switch = 0
-xlim = 2.5
-xlimextend = 2.5
+xlim = 6.5
+xlimextend = 6.5
 
-visitedcommits = {'XXXX': 0}
 
 commitscount = 1
 
@@ -126,19 +125,18 @@ while len(mergestack) > 0:
 	y = float(vc.y)
 	z = float(vc.z)
 	
-	colors.extend([1, 0, 0])
-	colors.extend([1, 0, 0])
+	colors.extend(color_mergelines)
+	colors.extend(color_mergelines)
 	vertices.extend([x - clen/2, y - clen/2, z])
 	vertices.extend([vc.parentx + clen/2, vc.parenty - clen/2, vc.parentz])
-	mb = vc.mergebase
-	colors, vertices = add_commit(colors, vertices, x, y, z, commit, clen, mb)
+	colors, vertices = add_commit(colors, vertices, x, y, z, commit, clen, True)
 	#if commit.hex in visitedcommits:
 	#	continue
 	visitedcommits[commit.hex] = 1
 	printprogress(commitscount)
 	commitscount = commitscount + 1
 	while len(commit.parents) > 0:
-		r = random.uniform(1, 3)
+		r = random.uniform(5, 10)
 		if switch == 1:
 			pxs = x + xlim + r
 		else:
@@ -147,27 +145,23 @@ while len(mergestack) > 0:
 			for i, parent in enumerate(commit.parents):
 				if i == 0:
 					continue
-				mergebase = repo.merge_base(commit.parents[0].hex, parent.hex)
-				#print "    mb:", mergebase.hex
-				vc = viscommit(parent, mergebase, pxs, y, z, x, y, z)
+				vc = viscommit(parent, pxs, y, z, x, y, z)
 				if switch == 1:
-					pxs = pxs + xlimextend + random.uniform(1, 1.5)	
+					pxs = pxs + xlimextend
 				else:
-					pxs = pxs - xlimextend - random.uniform(1, 1.5)
+					pxs = pxs - xlimextend
 				mergestack.append(vc)
 			switch = 1 - switch
 			xlim = xlim + xlimextend
 			if xlim >= 5.0:
 				xlim = xlimextend
-		y = y - (nextlen) - random.uniform(0.01,0.10)
+		y = y - (nextlen)
 
 		commit = commit.parents[0]
 		if commit.hex in visitedcommits:
 			break
-		if mb is not None and mb.hex == commit.hex:
-			break
 		#print commit.hex,commit.message.split("\n")[0]
-		colors, vertices = add_commit(colors, vertices, x, y, z, commit, clen, mb)
+		colors, vertices = add_commit(colors, vertices, x, y, z, commit, clen, False)
 		visitedcommits[commit.hex] = 1
 		printprogress(commitscount)
 		commitscount = commitscount + 1
@@ -191,6 +185,7 @@ glColorPointer(3, GL_FLOAT, 0, None)
 speed = 0.50
 running = True
 drawall = True
+textrendering = False
 
 glShadeModel (GL_FLAT)
 pygame.key.set_repeat(2,10)
@@ -202,7 +197,10 @@ while running:
 			break
 		elif event.type == pygame.KEYDOWN:
 			drawall = True
-
+		elif event.type == pygame.KEYUP:
+			drawall = True
+			if event.key == pygame.K_t:
+				textrendering = not textrendering
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT] or kp[K_d]:
  			glTranslatef(-1 * speed, 0, 0)
@@ -227,7 +225,8 @@ while running:
 	if drawall == True:
 		# clear and draw everything!
 		glClear (GL_COLOR_BUFFER_BIT)
-		glCallList (textlist)
+		if textrendering == True:
+			glCallList (textlist)
 		# create vertex buffer object
 		glDrawArrays (GL_LINES, 0, len(vertices)/3)
 		pygame.display.flip ()
