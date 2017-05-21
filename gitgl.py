@@ -21,7 +21,7 @@ count = 0
 x = 0
 y = 2
 z = 0
-clen = 0.40
+clen = 0.90
 nextlen = 5.00
 visitedcommits = {'XXXX': 0}
 
@@ -56,11 +56,11 @@ class viscommit:
 		self.z = z
 		self.mergecolor = mergecolor
 
-def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
-	colors.extend(color_mergelines)
-	colors.extend(color_mergelines)
-	colors.extend(color_mergelines)
-	colors.extend(color_mergelines)
+def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinescolor):
+	colors.extend(color_commitbox)
+	colors.extend(color_commitbox)
+	colors.extend(color_commitbox)
+	colors.extend(color_commitbox)
 	colors.extend(color_commitbox)
 	colors.extend(color_commitbox)
 	colors.extend(color_commitbox)
@@ -86,8 +86,8 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext):
 		return colors, vertices, 0
 
 	randy = random.uniform(25, 50)
-	colors.extend(color_commitlines)
-	colors.extend(color_commitlines)
+	colors.extend(commitlinescolor)
+	colors.extend(commitlinescolor)
 	vertices.extend([x, y - clen, z])
 	vertices.extend([x, y - nextlen - randy, z])
 	if commit.parents[0].hex in visitedcommits:
@@ -109,6 +109,9 @@ def printprogress(commitscount):
 	if commitscount % 25 == 0:
 		print "total: ", commitscount, "commits per second: ", commitscount/(curtime - starttime)
 
+centrallinecolor = [0.7, 0.2, 0.2]
+firstline = True
+
 textlist = glGenLists(1)
 glNewList (textlist, GL_COMPILE)
 while len(mergestack) > 0:
@@ -128,7 +131,11 @@ while len(mergestack) > 0:
 	vertices.extend([x - clen/2, vc.parenty - clen/2, vc.parentz])
 	vertices.extend([vc.parentx - clen/2, vc.parenty - clen/2, vc.parentz])
 	color_commitlines[2] = (float(40) + random.uniform(41, 255)) / 255
-	colors, vertices, randy = add_commit(colors, vertices, x, y, z, commit, clen, True)
+	if firstline == True:
+		commitlinescolor = centrallinecolor
+	else:
+		commitlinescolor = color_commitlines
+	colors, vertices, randy = add_commit(colors, vertices, x, y, z, commit, clen, True, commitlinescolor)
 	visitedcommits[commit.hex] = 1
 	printprogress(commitscount)
 	commitscount = commitscount + 1
@@ -138,7 +145,9 @@ while len(mergestack) > 0:
 			pxs = x + xlim * r
 		else:
 			pxs = x - (xlim * r)
+		ismerge = False
 		if len(commit.parents) > 1:
+			ismerge = True
 			vcmergecolor = copy.copy(color_mergelines)
 			vcmergecolor[2] = (float(40) + random.uniform(41, 255)) / 255
 			for i, parent in enumerate(commit.parents):
@@ -163,10 +172,12 @@ while len(mergestack) > 0:
 		if commit.hex in visitedcommits:
 			break
 		#print commit.hex,commit.message.split("\n")[0]
-		(colors, vertices, randy) = add_commit(colors, vertices, x, y, z, commit, clen, False)
+		(colors, vertices, randy) = add_commit(colors, vertices, x, y, z, commit, clen, ismerge or (len(commit.parents) > 1), commitlinescolor)
 		visitedcommits[commit.hex] = 1
 		printprogress(commitscount)
 		commitscount = commitscount + 1
+	firstline = False
+
 glEndList ()
 glShadeModel (GL_FLAT)
 
