@@ -126,10 +126,10 @@ while len(mergestack) > 0:
 	colors.extend(vc.mergecolor)
 	colors.extend(vc.mergecolor)
 	colors.extend(vc.mergecolor)
-	vertices.extend([x - clen/2, y - clen/2, z])
-	vertices.extend([x - clen/2, vc.parenty - clen/2, vc.parentz])
-	vertices.extend([x - clen/2, vc.parenty - clen/2, vc.parentz])
-	vertices.extend([vc.parentx - clen/2, vc.parenty - clen/2, vc.parentz])
+	vertices.extend([x, y - clen/2, z])
+	vertices.extend([x, vc.parenty - clen/2, vc.parentz])
+	vertices.extend([x, vc.parenty - clen/2, vc.parentz])
+	vertices.extend([vc.parentx, vc.parenty - clen/2, vc.parentz])
 	color_commitlines[2] = (float(40) + random.uniform(41, 255)) / 255
 	if firstline == True:
 		commitlinescolor = centrallinecolor
