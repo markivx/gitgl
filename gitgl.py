@@ -1,4 +1,6 @@
+import random
 import pygame
+import time
 import sys
 import copy
 from OpenGL.GL import *
@@ -33,16 +35,17 @@ glEnableClientState (GL_COLOR_ARRAY)
 gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
 glTranslatef(0.0, 0.0, -5)
 selfont = pygame.font.match_font('ubuntucondensed')
-font = pygame.font.Font(selfont, 16)
+font = pygame.font.Font(selfont, 18)
 
 textlist = glGenLists(1)
 glNewList (textlist, GL_COMPILE)
 commit = repo.revparse_single('HEAD')
 repohead = commit
+random.seed(repohead.hex)
 
 clen=0.03
 coffset = 0.02
-nextlen = 0.48
+nextlen = 0.88
 
 class viscommit:
 	def __init__(self, commitobj, mergebase, x, y, z, px, py, pz):
@@ -75,12 +78,12 @@ def add_commit(colors, vertices, x, y, z, commit, clen, mb):
 	vertices.extend([x + clen/2, y, z])
 	vertices.extend([x + clen/2, y - clen, z])
 
-	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:5]
+	text = commit.hex[0:7] + " "  +  commit.message.split("\n")[0][0:10]
 	if commit.hex in repohead.hex:
 		text = text + "[HEAD] "
-	if mb is not None: # and len(commit.parents) > 0 and mb.hex == commit.parents[0].hex:
+	if mb is not None and len(commit.parents) > 0 and mb.hex == commit.parents[0].hex:
 		text = text + "[mb: " + mb.hex[0:7] + "]"
-	drawText(font, text, x + 0.01, y, z)
+	#drawText(font, text, x + 0.02, y + 0.03, z)
 
 	if len(commit.parents) > 0:
 		if mb is not None and mb.hex == commit.parents[0].hex:
@@ -89,8 +92,8 @@ def add_commit(colors, vertices, x, y, z, commit, clen, mb):
 	if len(commit.parents) == 0:
 		return colors, vertices
 
-	colors.extend([0, 0, 1])
-	colors.extend([0, 0, 1])
+	colors.extend([0.50, 0.50, 0.80])
+	colors.extend([0.50, 0.50, 0.80])
 	vertices.extend([x, y - clen, z])
 	vertices.extend([x, y - nextlen, z])
 	return colors, vertices
@@ -106,10 +109,19 @@ xlimextend = 2.5
 
 visitedcommits = {'XXXX': 0}
 
+commitscount = 1
+
+starttime = int(round(time.time())) - 1
+
+def printprogress(commitscount):
+	curtime = int(round(time.time()))
+	if commitscount % 25 == 0:
+		print "total: ", commitscount, "commits per second: ", commitscount/(curtime - starttime)
+
 while len(mergestack) > 0:
 	vc = mergestack.pop()
 	commit = vc.commitobj
-	print commit.hex, commit.message.split("\n")[0]
+	#print commit.hex, commit.message.split("\n")[0]
 	x = float(vc.x)
 	y = float(vc.y)
 	z = float(vc.z)
@@ -123,37 +135,42 @@ while len(mergestack) > 0:
 	#if commit.hex in visitedcommits:
 	#	continue
 	visitedcommits[commit.hex] = 1
+	printprogress(commitscount)
+	commitscount = commitscount + 1
 	while len(commit.parents) > 0:
+		r = random.uniform(1, 3)
 		if switch == 1:
-			pxs = x + xlim
+			pxs = x + xlim + r
 		else:
-			pxs = x - xlim
+			pxs = x - xlim - r
 		if len(commit.parents) > 1:
 			for i, parent in enumerate(commit.parents):
 				if i == 0:
 					continue
 				mergebase = repo.merge_base(commit.parents[0].hex, parent.hex)
-				print "    mb:", mergebase.hex
+				#print "    mb:", mergebase.hex
 				vc = viscommit(parent, mergebase, pxs, y, z, x, y, z)
 				if switch == 1:
-					pxs = pxs + xlimextend	
+					pxs = pxs + xlimextend + random.uniform(1, 1.5)	
 				else:
-					pxs = pxs - xlimextend
+					pxs = pxs - xlimextend - random.uniform(1, 1.5)
 				mergestack.append(vc)
 			switch = 1 - switch
 			xlim = xlim + xlimextend
 			if xlim >= 5.0:
 				xlim = xlimextend
-		y = y - (nextlen)
+		y = y - (nextlen) - random.uniform(0.01,0.10)
 
 		commit = commit.parents[0]
 		if commit.hex in visitedcommits:
 			break
 		if mb is not None and mb.hex == commit.hex:
 			break
-		print commit.hex,commit.message.split("\n")[0]
+		#print commit.hex,commit.message.split("\n")[0]
 		colors, vertices = add_commit(colors, vertices, x, y, z, commit, clen, mb)
 		visitedcommits[commit.hex] = 1
+		printprogress(commitscount)
+		commitscount = commitscount + 1
 
 		
 glEndList ()
@@ -171,7 +188,7 @@ glBindBuffer(GL_ARRAY_BUFFER, cbo)
 glBufferData(GL_ARRAY_BUFFER, len(colors)*4, (c_float*len(colors))(*colors), GL_STATIC_DRAW)
 glColorPointer(3, GL_FLOAT, 0, None)
 
-speed = 0.20
+speed = 0.50
 running = True
 drawall = True
 
@@ -195,13 +212,13 @@ while running:
 			glTranslatef(0, 0,  speed)
 		elif kp[K_s]:
 			glTranslatef(0, 0, -1 * speed)
-		elif kp[K_UP]:
-			glTranslatef(0, speed,  0)
 		elif kp[K_DOWN]:
+			glTranslatef(0, speed,  0)
+		elif kp[K_UP]:
 			glTranslatef(0, -1 * speed, 0)
-		elif kp[K_PAGEUP]:
-			glTranslatef(0, speed * 10,  0)
 		elif kp[K_PAGEDOWN]:
+			glTranslatef(0, speed * 10,  0)
+		elif kp[K_PAGEUP]:
 			glTranslatef(0, -1 * (speed * 10), 0)
 		elif kp[K_z]:
 			running = False
