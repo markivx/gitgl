@@ -25,7 +25,7 @@ clen = 0.90
 nextlen = 5.00
 visitedcommits = {'XXXX': 0}
 
-textcolor = (100, 100, 100, 0)
+textcolor = (190, 190, 190, 0)
 imptextcolor = (255, 255, 255, 0)
 
 def drawText(font, mystr, x, y, z, forecolor):
