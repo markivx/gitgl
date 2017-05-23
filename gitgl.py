@@ -273,6 +273,8 @@ impy = visitedcommits[impcommit.hex][1]
 impz = visitedcommits[impcommit.hex][2]
 importantcommit = visitedcommits[impcommit.hex][3]
 
+gluLookAt(impx, impy, -50, impx, impy, 0, 0, 1, 0)
+
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
