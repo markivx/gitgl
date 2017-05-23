@@ -164,10 +164,6 @@ while len(mergestack) > 0:
 			vcmergecolor = copy.copy(color_mergelines)
 			vcmergecolor[2] = (float(40) + random.uniform(41, 225)) / 255
 			for i, parent in enumerate(commit.parents):
-				# We still want to know about merge parents even if we've seen them before
-				# Don't continue on these when popped from mergestack!
-				#if parent.hex in visitedcommits:
-				#	continue
 				r = random.uniform(5, 10)
 				q = random.uniform(25, 50)
 				if i == 0:
@@ -207,7 +203,6 @@ while len(mergestack) > 0:
 	firstline = False
 
 implinescolor = [1, 1, 1]
-
 print "Starting highlight procedure..."
 traverse = visitedcommits[impcommit.hex]
 while traverse[5] is not True:
@@ -244,6 +239,63 @@ glEndList ()
 glShadeModel (GL_FLAT)
 print "Finished constructing text lists"
 
+
+def highlight_commit(hcommit):
+	hvertices = []
+	hcolors = []
+	traverse = visitedcommits[hcommit.hex]
+	hx = traverse[0]
+	hy = traverse[1]
+	hz = traverse[2]
+	htextlist = glGenLists(1)
+	glNewList (htextlist, GL_COMPILE)
+	drawText(font, hcommit.message.split("\n")[0], hx + 0.02, hy + 0.03, hz, imptextcolor)
+
+	while traverse[5] is not True:
+		x = traverse[0]
+		y = traverse[1]
+		z = traverse[2]
+		child = visitedcommits[traverse[4].hex]
+		if child is None:
+			break
+
+		cx = child[0]
+		cy = child[1]
+		cz = child[2]
+		drawText(font, child[3].message.split("\n")[0], cx + 0.02, cy + 0.03, cz, imptextcolor)
+
+		if x == cx:
+			hcolors.extend(implinescolor)
+			hcolors.extend(implinescolor)
+			hvertices.extend([x, y, z])
+			hvertices.extend([cx, cy, cz])
+		else:
+			# reached a merge point!
+			hcolors.extend(implinescolor)
+			hcolors.extend(implinescolor)
+			hcolors.extend(implinescolor)
+			hcolors.extend(implinescolor)
+			hvertices.extend([x, y, z])
+			hvertices.extend([x, cy - clen/2, z])
+			hvertices.extend([x, cy - clen/2, z])
+			hvertices.extend([cx, cy - clen/2, z])
+		traverse = visitedcommits[traverse[4].hex]
+	glEndList ()
+	glShadeModel (GL_FLAT)
+
+	hbo = glGenBuffers (1)
+	glBindBuffer (GL_ARRAY_BUFFER, hbo)
+	glBufferData (GL_ARRAY_BUFFER, len(hvertices)*4, (c_float*len(hvertices))(*hvertices), GL_STATIC_DRAW)
+	glVertexPointer (3, GL_FLOAT, 0, None)
+
+	hcbo = glGenBuffers(1)
+	glBindBuffer(GL_ARRAY_BUFFER, hcbo)
+	glBufferData(GL_ARRAY_BUFFER, len(hcolors)*4, (c_float*len(hcolors))(*hcolors), GL_STATIC_DRAW)
+	glColorPointer(3, GL_FLOAT, 0, None)
+
+	return hvertices, hbo, hcbo, htextlist, hx, hy, hz
+		
+
 print "Binding buffers..."
 # create vertex buffer object
 vbo = glGenBuffers (1)
@@ -273,7 +325,12 @@ impy = visitedcommits[impcommit.hex][1]
 impz = visitedcommits[impcommit.hex][2]
 importantcommit = visitedcommits[impcommit.hex][3]
 
-gluLookAt(impx, impy, -50, impx, impy, 0, 0, 1, 0)
+gluLookAt(impx, impy, 50, impx, impy, 0, 0, 1, 0)
+
+hbo = 0
+hcbo = 0
+htextlist = 0
+hvertices = []
 
 while running:
 	for event in pygame.event.get():
@@ -302,6 +359,19 @@ while running:
 				speed = 300
 			elif event.key == pygame.K_8:
 				speed = 700
+			elif event.key == pygame.K_c:
+				inp = raw_input("Enter commit: ")
+				try:
+					hcommit = repo.revparse_single(inp)
+				except:
+					print "Couldn't find " + inp
+					continue
+				hvertices, hbo, hcbo, htextlist, hx, hy, hz = highlight_commit(hcommit)
+				drawall = True
+				glLoadIdentity()
+				gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
+				gluLookAt(hx, hy, 50, hx, hy, 0, 0, 1, 0)
+
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT] or kp[K_d]:
  			glTranslatef(-1 * speed, 0, 0)
@@ -329,8 +399,21 @@ while running:
 		if textrendering == True:
 			glCallList (textlist)
 		drawText(font, importantcommit.message.split("\n")[0], impx + 0.02, impy + 0.03, impz, imptextcolor)
+		glBindBuffer (GL_ARRAY_BUFFER, vbo)
+		glVertexPointer (3, GL_FLOAT, 0, None)
+		glBindBuffer (GL_ARRAY_BUFFER, cbo)
+		glColorPointer (3, GL_FLOAT, 0, None)
 		# create vertex buffer object
 		glDrawArrays (GL_LINES, 0, len(vertices)/3)
+
+		if hbo > 0:
+			pxpe = 1
+			glBindBuffer (GL_ARRAY_BUFFER, hbo)
+			glVertexPointer (3, GL_FLOAT, 0, None)
+			glBindBuffer(GL_ARRAY_BUFFER, hcbo)
+			glColorPointer(3, GL_FLOAT, 0, None)
+			glDrawArrays (GL_LINES, 0, len(hvertices)/3)
+			glCallList (htextlist)
 		pygame.display.flip ()
 		drawall = False
 	pygame.time.wait(10)
