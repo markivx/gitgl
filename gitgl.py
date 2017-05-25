@@ -313,7 +313,7 @@ glBufferData(GL_ARRAY_BUFFER, len(colors)*4, (c_float*len(colors))(*colors), GL_
 glColorPointer(3, GL_FLOAT, 0, None)
 print "....done. Number of vertices:", len(vertices)
 
-speed = 1.0
+speed = 32.0
 running = True
 drawall = True
 textrendering = False
@@ -321,14 +321,13 @@ textrendering = False
 glShadeModel (GL_FLAT)
 pygame.key.set_repeat(2,10)
 
-startScale = 0.02
-
 impx = visitedcommits[impcommit.hex][0]
 impy = visitedcommits[impcommit.hex][1]
 impz = visitedcommits[impcommit.hex][2]
 importantcommit = visitedcommits[impcommit.hex][3]
 
-gluLookAt(impx, impy, 50, impx, impy, 0, 0, 1, 0)
+lookdistance = 250
+gluLookAt(impx, impy, lookdistance, impx, impy, 0, 0, 1, 0)
 
 hbo = 0
 hcbo = 0
@@ -336,7 +335,7 @@ htextlist = 0
 hvertices = []
 overx = -40
 overy = 40
-overz = 0
+overz = 200
 
 startcommitsearch = False
 
@@ -367,6 +366,12 @@ while running:
 			elif event.key == pygame.K_ESCAPE:
 				startcommitsearch = False
 				searchhex = ""
+			elif startcommitsearch and event.key >= pygame.K_a and event.key <= pygame.K_z:
+				n = ord('a') + (event.key - pygame.K_a)
+				if pygame.key.get_mods() & (KMOD_SHIFT | KMOD_CAPS):
+					n = ord('A') + (event.key - pygame.K_a)
+				searchhex += chr(n)
+				print searchhex
 			elif startcommitsearch and event.key >= pygame.K_a and event.key <= pygame.K_f:
 				n = 10 + event.key - pygame.K_a
 				searchhex += str(hex(n)).replace("0x", "")
@@ -375,6 +380,9 @@ while running:
 				n = event.key - pygame.K_0
 				searchhex += str(n)
 				print searchhex
+			elif startcommitsearch and event.key == K_BACKSPACE:
+				if len(searchhex) > 0:
+					searchhex = searchhex[0:len(searchhex)-1]
 
 		if startcommitsearch and len(searchhex) > 7:
 			try:
@@ -388,7 +396,7 @@ while running:
 			drawall = True
 			glLoadIdentity()
 			gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
-			gluLookAt(hx, hy, 50, hx, hy, 0, 0, 1, 0)
+			gluLookAt(hx, hy, lookdistance, hx, hy, 0, 0, 1, 0)
 
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT]:
@@ -432,7 +440,8 @@ while running:
 		glDrawArrays (GL_LINES, 0, len(vertices)/3)
 		drawText(font, "gitGL", overx, overy, overz, imptextcolor)
 		if startcommitsearch:
-			drawText(font, "search: " + searchhex, overx, overy - 4, overz, imptextcolor)
+			drawText(font, "search:  " + searchhex, overx, overy - 2, overz, imptextcolor)
+		drawText(font, "speed:  " + str(speed), overx, overy - 3.5, overz, imptextcolor)
 
 		if hbo > 0:
 			pxpe = 1
