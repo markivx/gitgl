@@ -14,8 +14,8 @@ repostr = sys.argv[1] + "/.git"
 repo = Repository(repostr)
 vertices = []
 colors = []
-color_mergelines =  [0.05, 0.05, 0.55]
-color_commitlines = [0.20, 0.20, 0.50]
+color_mergelines =  [0.05, 0.05, 0.45]
+color_commitlines = [0.10, 0.10, 0.40]
 color_commitbox = [0.93, 0.93, 0.93]
 count = 0
 x = 0
@@ -43,7 +43,7 @@ glEnableClientState (GL_COLOR_ARRAY)
 gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
 glTranslatef(0.0, 0.0, -50)
 selfont = pygame.font.match_font('ubuntucondensed')
-font = pygame.font.Font(selfont, 19)
+font = pygame.font.Font(selfont, 18)
 commit = repo.revparse_single(sys.argv[2])
 impcommithash = sys.argv[3]
 impcommit = repo.revparse_single(impcommithash)
@@ -135,7 +135,7 @@ while len(mergestack) > 0:
 	vertices.extend([x, vc.parenty - clen/2, vc.parentz])
 	vertices.extend([x, vc.parenty - clen/2, vc.parentz])
 	vertices.extend([vc.parentx, vc.parenty - clen/2, vc.parentz])
-	color_commitlines[2] = (float(125) + random.uniform(126, 225)) / 255
+	color_commitlines[2] = (float(125) + random.uniform(126, 205)) / 255
 
 	# if we've seen this before, draw the commit text and continue on to the next merge
 	if commit.hex in visitedcommits and commit.hex not in orighead.hex:
@@ -162,7 +162,7 @@ while len(mergestack) > 0:
 		if len(commit.parents) > 1:
 			ismerge = True
 			vcmergecolor = copy.copy(color_mergelines)
-			vcmergecolor[2] = (float(40) + random.uniform(41, 225)) / 255
+			vcmergecolor[2] = (float(40) + random.uniform(41, 205)) / 255
 			for i, parent in enumerate(commit.parents):
 				r = random.uniform(5, 10)
 				q = random.uniform(25, 50)
@@ -313,7 +313,7 @@ glBufferData(GL_ARRAY_BUFFER, len(colors)*4, (c_float*len(colors))(*colors), GL_
 glColorPointer(3, GL_FLOAT, 0, None)
 print "....done. Number of vertices:", len(vertices)
 
-speed = 0.50
+speed = 1.0
 running = True
 drawall = True
 textrendering = False
@@ -335,6 +335,8 @@ hcbo = 0
 htextlist = 0
 hvertices = []
 
+startcommitsearch = False
+
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -346,23 +348,17 @@ while running:
 			drawall = True
 			if event.key == pygame.K_t:
 				textrendering = not textrendering
-			elif event.key == pygame.K_1:
-				speed = 0.50
-			elif event.key == pygame.K_2:
-				speed = 2
-			elif event.key == pygame.K_3:
-				speed = 5
-			elif event.key == pygame.K_4:
-				speed = 10
-			elif event.key == pygame.K_5:
-				speed = 40
-			elif event.key == pygame.K_6:
-				speed = 100			
-			elif event.key == pygame.K_7:
-				speed = 300
-			elif event.key == pygame.K_8:
-				speed = 700
-			elif event.key == pygame.K_c:
+			elif event.key == pygame.K_v:
+				speed *= 5
+				if speed > 700:
+					speed = 700
+				print speed
+			elif event.key == pygame.K_x:
+				speed /= 5
+				if speed <= 1:
+					speed = 1
+				print speed
+			elif event.key == pygame.K_h:
 				inp = raw_input("Enter commit: ")
 				try:
 					hcommit = repo.revparse_single(inp)
@@ -374,11 +370,38 @@ while running:
 				glLoadIdentity()
 				gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
 				gluLookAt(hx, hy, 50, hx, hy, 0, 0, 1, 0)
+			elif event.key == pygame.K_SLASH:
+				startcommitsearch = True
+				searchhex = ""
+			elif event.key == pygame.K_ESCAPE:
+				startcommitsearch = False
+				searchhex = ""
+			elif startcommitsearch and event.key >= pygame.K_a and event.key <= pygame.K_f:
+				n = 10 + event.key - pygame.K_a
+				searchhex += str(hex(n)).replace("0x", "")
+				print searchhex
+			elif startcommitsearch and event.key >= pygame.K_0 and event.key <= pygame.K_9:
+				n = event.key - pygame.K_0
+				searchhex += str(n)
+				print searchhex
+
+		if startcommitsearch and len(searchhex) > 7:
+			try:
+				hcommit = repo.revparse_single(searchhex)
+			except:
+				print "Couldn't find " + searchhex
+				startcommitsearch = False
+				continue
+			hvertices, hbo, hcbo, htextlist, hx, hy, hz = highlight_commit(hcommit)
+			drawall = True
+			glLoadIdentity()
+			gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
+			gluLookAt(hx, hy, 50, hx, hy, 0, 0, 1, 0)
 
 		kp = pygame.key.get_pressed()
-		if kp[K_RIGHT] or kp[K_d]:
+		if kp[K_RIGHT]:
  			glTranslatef(-1 * speed, 0, 0)
- 		if kp[K_LEFT] or kp[K_a]:
+ 		if kp[K_LEFT]:
 			glTranslatef(speed, 0, 0)
 		if kp[K_w]:
 			glTranslatef(0, 0,  speed)
@@ -416,7 +439,9 @@ while running:
 			glVertexPointer (3, GL_FLOAT, 0, None)
 			glBindBuffer(GL_ARRAY_BUFFER, hcbo)
 			glColorPointer(3, GL_FLOAT, 0, None)
+			glLineWidth(2)	
 			glDrawArrays (GL_LINES, 0, len(hvertices)/3)
+			glLineWidth(1)	
 			glCallList (htextlist)
 		pygame.display.flip ()
 		drawall = False
