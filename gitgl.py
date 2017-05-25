@@ -262,7 +262,10 @@ def highlight_commit(hcommit):
 		cx = child[0]
 		cy = child[1]
 		cz = child[2]
-		drawText(font, child[3].message.split("\n")[0], cx + 0.02, cy + 0.03, cz, imptextcolor)
+
+		if x != cx:
+			msg = child[3].hex[0:8] + " " + child[3].message.split("\n")[0][0:51]
+			drawText(font, msg, cx + clen/2 + 0.05, cy + clen/2 + 0.05, cz, imptextcolor)
 
 		if x == cx:
 			hcolors.extend(implinescolor)
@@ -398,7 +401,8 @@ while running:
 		glClear (GL_COLOR_BUFFER_BIT)
 		if textrendering == True:
 			glCallList (textlist)
-		drawText(font, importantcommit.message.split("\n")[0], impx + 0.02, impy + 0.03, impz, imptextcolor)
+		msg = importantcommit.hex[0:8] + " " + importantcommit.message.split("\n")[0][0:51]
+		drawText(font, msg, impx + clen/2 + 0.05, impy + clen/2 + 0.05, impz, imptextcolor)
 		glBindBuffer (GL_ARRAY_BUFFER, vbo)
 		glVertexPointer (3, GL_FLOAT, 0, None)
 		glBindBuffer (GL_ARRAY_BUFFER, cbo)
