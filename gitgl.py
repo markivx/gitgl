@@ -51,7 +51,7 @@ repohead = commit
 random.seed(repohead.hex)
 
 class viscommit:
-	def __init__(self, commitobj, childcommitobj, x, y, z, px, py, pz, mergecolor):
+	def __init__(self, commitobj, childcommitobj, x, y, z, px, py, pz, mergecolor, switch):
 		self.commitobj = commitobj
 		self.childcommit = childcommitobj
 		self.parentx = px
@@ -61,6 +61,7 @@ class viscommit:
 		self.y = y
 		self.z = z
 		self.mergecolor = mergecolor
+		self.switch = switch
 
 def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinescolor):
 	colors.extend(color_commitbox)
@@ -100,7 +101,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinesc
 		drawText(font, commit.parents[0].hex[0:8], x + 0.02, y - clen - nextlen - randy, z, textcolor)
 	return colors, vertices, randy
 
-v = viscommit(commit, None, x, y, z, x, y, z, color_commitlines)
+v = viscommit(commit, None, x, y, z, x, y, z, color_commitlines, 0)
 orighead = copy.copy(v).commitobj
 mergestack = [v]
 pxs = x
@@ -112,7 +113,7 @@ starttime = int(round(time.time())) - 1
 
 def printprogress(commitscount):
 	curtime = int(round(time.time()))
-	if commitscount % 25 == 0:
+	if commitscount % 7000 == 0:
 		print "total: ", commitscount, "commits per second: ", commitscount/(curtime - starttime)
 
 centrallinecolor = [0.7, 0.2, 0.2]
@@ -154,7 +155,12 @@ while len(mergestack) > 0:
 	commitscount = commitscount + 1
 	while len(commit.parents) > 0:
 		r = random.uniform(5, 10)
-		if switch == 1:
+		if firstline:
+			sw = switch
+			switch = 1 - switch
+		else:
+			sw = vc.switch
+		if sw == 1:
 			pxs = x + xlim * r
 		else:
 			pxs = x - (xlim * r)
@@ -168,14 +174,13 @@ while len(mergestack) > 0:
 				q = random.uniform(25, 50)
 				if i == 0:
 					continue
-				if switch == 1:
+				if sw == 1:
 					pxs = pxs + xlimextend * r
 				else:
 					pxs = pxs - (xlimextend * r)
 				pxy = y - q
-				vc = viscommit(parent, commit, pxs, pxy, z, x, y, z, vcmergecolor)
+				vc = viscommit(parent, commit, pxs, pxy, z, x, y, z, vcmergecolor, sw)
 				mergestack.append(vc)
-			switch = 1 - switch
 			xlim = xlim + xlimextend
 			if xlim >= 5.0:
 				xlim = xlimextend
@@ -397,6 +402,9 @@ while running:
 			glLoadIdentity()
 			gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
 			gluLookAt(hx, hy, lookdistance, hx, hy, 0, 0, 1, 0)
+			overx = hx - 10
+			overy = hy + 10
+			overz = 200
 
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT]:
@@ -417,10 +425,6 @@ while running:
 		if kp[K_UP]:
 			glTranslatef(0, -1 * speed, 0)
 			overy += speed
-		if kp[K_PAGEDOWN]:
-			glTranslatef(0, speed,  0)
-		if kp[K_PAGEUP]:
-			glTranslatef(0, -1 * speed, 0)
 		if kp[K_z]:
 			running = False
 			break
