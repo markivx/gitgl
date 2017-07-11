@@ -14,9 +14,9 @@ repostr = sys.argv[1] + "/.git"
 repo = Repository(repostr)
 vertices = []
 colors = []
-color_mergelines =  [0.05, 0.05, 0.45]
+color_mergelines =  [0.05, 0.05, 0.25]
 color_commitlines = [0.10, 0.10, 0.40]
-color_commitbox = [0.93, 0.93, 0.93]
+color_commitbox = [0.13, 0.43, 0.13]
 count = 0
 x = 0
 y = 2
@@ -25,11 +25,11 @@ clen = 0.90
 nextlen = 5.00
 visitedcommits = {'XXXX': 0}
 
-textcolor = (190, 190, 190, 0)
-imptextcolor = (255, 255, 255, 0)
+textcolor = (0, 0, 50, 0)
+imptextcolor = (50, 0, 0, 0)
 
 def drawText(font, mystr, x, y, z, forecolor):
-	tsf = font.render(mystr, True, forecolor, (0, 0, 0, 255))
+	tsf = font.render(mystr, True, forecolor, (255, 255, 255, 255))
 	fts = pygame.image.tostring(tsf, "RGBA", True)
 	glRasterPos3d(*(x, y, z))
 	glDrawPixels(tsf.get_width(), tsf.get_height(), GL_RGBA, GL_UNSIGNED_BYTE, fts)
@@ -37,7 +37,7 @@ def drawText(font, mystr, x, y, z, forecolor):
 pygame.init ()
 display = (1280, 1024)
 pygame.display.set_mode (display, pygame.OPENGL|pygame.DOUBLEBUF)
-glClearColor (0.0, 0.0, 0.0, 1.0)
+glClearColor (1.0, 1.0, 1.0, 1.0)
 glEnableClientState (GL_VERTEX_ARRAY)
 glEnableClientState (GL_COLOR_ARRAY)	
 gluPerspective(45, (display[0]/display[1]), 0.01, 9250.0)
@@ -83,7 +83,7 @@ def add_commit(colors, vertices, x, y, z, commit, clen, rendertext, commitlinesc
 	vertices.extend([x + clen/2, y, z])
 	vertices.extend([x + clen/2, y - clen, z])
 
-	text = commit.hex[0:8] + " "  +  commit.message.split("\n")[0][0:80]
+	text = commit.hex[0:8] + " "  +  commit.message.split("\n")[0][0:20]
 	if commit.hex in repohead.hex:
 		text = text + "[HEAD] "
 	elif rendertext == True:
@@ -434,7 +434,7 @@ while running:
 		glClear (GL_COLOR_BUFFER_BIT)
 		if textrendering == True:
 			glCallList (textlist)
-		msg = importantcommit.hex[0:8] + " " + importantcommit.message.split("\n")[0][0:51]
+		msg = importantcommit.hex[0:8] + " " + importantcommit.message.split("\n")[0][0:10]
 		drawText(font, msg, impx + clen/2 + 0.05, impy + clen/2 + 0.05, impz, imptextcolor)
 		glBindBuffer (GL_ARRAY_BUFFER, vbo)
 		glVertexPointer (3, GL_FLOAT, 0, None)
