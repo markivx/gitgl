@@ -114,7 +114,7 @@ starttime = int(round(time.time())) - 1
 def printprogress(commitscount):
 	curtime = int(round(time.time()))
 	if commitscount % 7000 == 0:
-		print "total: ", commitscount, "commits per second: ", commitscount/(curtime - starttime)
+		print("total: ", commitscount, "commits per second: ", commitscount/(curtime - starttime))
 
 centrallinecolor = [0.7, 0.2, 0.2]
 firstline = True
@@ -208,7 +208,7 @@ while len(mergestack) > 0:
 	firstline = False
 
 implinescolor = [1, 1, 1]
-print "Starting highlight procedure..."
+print("Starting highlight procedure...")
 traverse = visitedcommits[impcommit.hex]
 while traverse[5] is not True:
 	x = traverse[0]
@@ -238,11 +238,11 @@ while traverse[5] is not True:
 		vertices.extend([x, cy - clen/2, z])
 		vertices.extend([cx, cy - clen/2, z])
 	traverse = visitedcommits[traverse[4].hex]
-print "Finished highlight procedure..."
+print("Finished highlight procedure...")
 
 glEndList ()
 glShadeModel (GL_FLAT)
-print "Finished constructing text lists"
+print("Finished constructing text lists")
 
 
 def highlight_commit(hcommit):
@@ -304,7 +304,7 @@ def highlight_commit(hcommit):
 	return hvertices, hbo, hcbo, htextlist, hx, hy, hz
 		
 
-print "Binding buffers..."
+print("Binding buffers...")
 # create vertex buffer object
 vbo = glGenBuffers (1)
 glBindBuffer (GL_ARRAY_BUFFER, vbo)
@@ -316,7 +316,7 @@ cbo = glGenBuffers(1)
 glBindBuffer(GL_ARRAY_BUFFER, cbo)
 glBufferData(GL_ARRAY_BUFFER, len(colors)*4, (c_float*len(colors))(*colors), GL_STATIC_DRAW)
 glColorPointer(3, GL_FLOAT, 0, None)
-print "....done. Number of vertices:", len(vertices)
+print("....done. Number of vertices:", len(vertices))
 
 speed = 32.0
 running = True
@@ -359,12 +359,12 @@ while running:
 				speed *= 2
 				if speed > 1024:
 					speed = 1024
-				print speed
+				print(speed)
 			elif event.key == pygame.K_r:
 				speed /= 2
 				if speed <= 1:
 					speed = 1
-				print speed
+				print(speed)
 			elif event.key == pygame.K_SLASH:
 				startcommitsearch = True
 				searchhex = ""
@@ -376,15 +376,15 @@ while running:
 				if pygame.key.get_mods() & (KMOD_SHIFT | KMOD_CAPS):
 					n = ord('A') + (event.key - pygame.K_a)
 				searchhex += chr(n)
-				print searchhex
+				print(searchhex)
 			elif startcommitsearch and event.key >= pygame.K_a and event.key <= pygame.K_f:
 				n = 10 + event.key - pygame.K_a
 				searchhex += str(hex(n)).replace("0x", "")
-				print searchhex
+				print(searchhex)
 			elif startcommitsearch and event.key >= pygame.K_0 and event.key <= pygame.K_9:
 				n = event.key - pygame.K_0
 				searchhex += str(n)
-				print searchhex
+				print(searchhex)
 			elif startcommitsearch and event.key == K_BACKSPACE:
 				if len(searchhex) > 0:
 					searchhex = searchhex[0:len(searchhex)-1]
@@ -393,7 +393,7 @@ while running:
 			try:
 				hcommit = repo.revparse_single(searchhex)
 			except:
-				print "Couldn't find " + searchhex
+				print("Couldn't find " + searchhex)
 				startcommitsearch = False
 				continue
 			startcommitsearch = False
@@ -408,9 +408,9 @@ while running:
 
 		kp = pygame.key.get_pressed()
 		if kp[K_RIGHT]:
- 			glTranslatef(-1 * speed, 0, 0)
+			glTranslatef(-1 * speed, 0, 0)
 			overx += speed
- 		if kp[K_LEFT]:
+		if kp[K_LEFT]:
 			glTranslatef(speed, 0, 0)
 			overx -= speed
 		if kp[K_w]:
@@ -441,7 +441,7 @@ while running:
 		glBindBuffer (GL_ARRAY_BUFFER, cbo)
 		glColorPointer (3, GL_FLOAT, 0, None)
 		# create vertex buffer object
-		glDrawArrays (GL_LINES, 0, len(vertices)/3)
+		glDrawArrays (GL_LINES, 0, int(len(vertices)/3))
 		drawText(font, "gitGL", overx, overy, overz, imptextcolor)
 		if startcommitsearch:
 			drawText(font, "search:  " + searchhex, overx, overy - 2, overz, imptextcolor)
